@@ -1,0 +1,14 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+ASURAT.Rproj
+ASURAT_files
+.DS_Store
+
+src/*.o
+src/*.so
+src/*.dll
+
+/doc/
+/Meta/

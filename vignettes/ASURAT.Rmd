@@ -1,0 +1,793 @@
+---
+title: "ASURAT"
+author: "Keita Iida"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+    number_section: true
+    fig_width: 6
+    fig_height: 5.4
+vignette: >
+  %\VignetteIndexEntry{ASURAT}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+
+# Installations
+Attach necessary libraries:
+```{r, message = FALSE, warning = FALSE}
+library(ASURAT)
+library(SingleCellExperiment)
+library(SummarizedExperiment)
+```
+
+
+
+<br>
+
+# Goal
+A goal of ASURAT is to cluster and characterize individual samples (cells)
+in terms of cell type (or disease), biological function, signaling pathway
+activity, and so on (see [here](#multilayered)).
+
+
+
+<br>
+
+# Quick start by SingleCellExperiment objects
+Having a SingleCellExperiment object (e.g., `sce`), one can use ASURAT by
+confirming the following requirements:
+
+* `assays(sce)` contains gene expression data with row and column names as
+  variable (gene) and sample (cell), respectively,
+
+If `sce` contains normalized expression data (e.g., `assay(sce, "logcounts")`),
+set `assay(sce, "centered")` by subtracting the data with the mean expression
+levels across samples (cells).
+```{r, eval = FALSE}
+mat <- as.matrix(assay(sce, "logcounts"))
+assay(sce, "centered") <- sweep(mat, 1, apply(mat, 1, mean), FUN = "-")
+```
+
+One may use a Seurat function `Seurat::as.SingleCellExperiment()` for converting
+Seurat objects into SingleCellExperiment ones.
+
+Now, ready for the next step [here](#sign).
+
+
+
+<br>
+
+# Preprocessing
+## Prepare SingleCellExperiment objects
+Load single-cell RNA sequencing (scRNA-seq) data.
+```{r, message = FALSE}
+sce <- TENxPBMCData::TENxPBMCData(dataset = c("pbmc4k"))
+pbmc_counts <- as.matrix(assay(sce, "counts"))
+rownames(pbmc_counts) <- make.unique(rowData(sce)$Symbol_TENx)
+colnames(pbmc_counts) <- make.unique(colData(sce)$Barcode)
+```
+Here, `pbmc_counts` is a read count table of peripheral blood mononuclear cells
+(PBMCs).
+
+Below is a head of `pbmc_counts`:
+```{r}
+pbmc_counts[1:5, 1:3]
+```
+
+Create SingleCellExperiment objects by inputting gene expression data.
+```{r}
+pbmc <- SingleCellExperiment(assays = list(counts = pbmc_counts),
+                             rowData = data.frame(gene = rownames(pbmc_counts)),
+                             colData = data.frame(cell = colnames(pbmc_counts)))
+```
+
+Check data sizes.
+```{r}
+dim(pbmc)
+```
+
+
+
+<br>
+
+## Control data quality
+Remove variables (genes) and samples (cells) with low quality,
+by processing the following three steps:
+
+1. remove variables based on expression profiles across samples,
+2. remove samples based on the numbers of reads and nonzero expressed variables,
+3. remove variables based on the mean read counts across samples.
+
+First of all, add metadata for both variables and samples using ASURAT function
+`add_metadata()`.
+
+The arguments are
+
+* `sce`: SingleCellExperiment object, and
+* `mitochondria_symbol`: a string representing for mitochondrial genes.
+```{r}
+pbmc <- add_metadata(sce = pbmc, mitochondria_symbol = "^MT-")
+```
+One can check the results in `rowData(sce)` and `colData(sce)` slots.
+
+
+
+<br>
+
+### Remove variables based on expression profiles
+ASURAT function `remove_variables()` removes variable (gene) data such that
+the numbers of non-zero expressing samples (cells) are less than `min_nsamples`.
+```{r}
+pbmc <- remove_variables(sce = pbmc, min_nsamples = 10)
+```
+
+
+
+<br>
+
+### Remove samples based on expression profiles
+Qualities of sample (cell) data are confirmed based on proper visualization of
+`colData(sce)`.
+```{r}
+df <- data.frame(x = colData(pbmc)$nReads, y = colData(pbmc)$nGenes)
+ggplot2::ggplot() +
+  ggplot2::geom_point(ggplot2::aes(x = df$x, y = df$y), size = 1, alpha = 1) +
+  ggplot2::labs(x = "Number of reads", y = "Number of genes") +
+  ggplot2::theme_classic(base_size = 20)
+```
+
+```{r}
+df <- data.frame(x = colData(pbmc)$nReads, y = colData(pbmc)$percMT)
+ggplot2::ggplot() +
+  ggplot2::geom_point(ggplot2::aes(x = df$x, y = df$y), size = 1, alpha = 1) +
+  ggplot2::labs(x = "Number of reads", y = "Perc of MT reads") +
+  ggplot2::theme_classic(base_size = 20)
+```
+
+ASURAT function `remove_samples()` removes sample (cell) data by setting cutoff
+values for the metadata.
+
+The arguments are
+
+* `sce`: SingleCellExperiment object,
+* `min_nReads` and `max_nReads`: minimum and maximum number of reads,
+* `min_nGenes` and `max_nGenes`: minimum and maximum number of non-zero
+expressed genes, and
+* `min_percMT` and `max_percMT`: minimum and maximum percent of reads that
+map to mitochondrial genes, respectively.
+If there is no mitochondrial genes, set them as `NULL`.
+```{r}
+pbmc <- remove_samples(sce = pbmc, min_nReads = 5000, max_nReads = 20000,
+                       min_nGenes = 100, max_nGenes = 1e+10,
+                       min_percMT = 0, max_percMT = 10)
+```
+
+**Tips:**
+Take care not to set excessive values for the arguments of `remove_samples()`,
+or it may produce biased results.
+Note that `min_nReads = 5000` is somewhat large, which is used only for the
+tutorial.
+
+
+
+<br>
+
+### Remove variables based on the mean read counts
+Qualities of variable (gene) data are confirmed based on proper visualization of
+`rowData(sce)`.
+```{r}
+df <- data.frame(x = 1:nrow(rowData(pbmc)),
+                 y = sort(rowData(pbmc)$nSamples, decreasing = TRUE))
+ggplot2::ggplot() + ggplot2::scale_y_log10() +
+  ggplot2::geom_point(ggplot2::aes(x = df$x, y = df$y), size = 1, alpha = 1) +
+  ggplot2::labs(x = "Rank of genes", y = "Mean read counts") +
+  ggplot2::theme_classic(base_size = 20)
+```
+
+ASURAT function `remove_variables_second()` removes variable (gene) data
+such that the mean read counts across samples are less than `min_meannReads`.
+```{r}
+pbmc <- remove_variables_second(sce = pbmc, min_meannReads = 0.05)
+```
+
+
+
+<br>
+
+## Normalize data
+Normalize data using log transformation with a pseudo count and center the data
+by subtracting with the mean expression levels across samples (cells).
+The resulting normalized-and-centered data are used for downstream analyses.
+
+Perform log-normalization with a pseudo count.
+```{r}
+assay(pbmc, "logcounts") <- log(assay(pbmc, "counts") + 1)
+```
+
+Center each row data.
+```{r}
+mat <- assay(pbmc, "logcounts")
+assay(pbmc, "centered") <- sweep(mat, 1, apply(mat, 1, mean), FUN = "-")
+```
+
+Set gene expression data into `altExp(sce)`.
+
+**Tips:**
+Take care not to use a slot name "log-normalized" for `altExp(sce)`,
+which may produce an error when using a Seurat (version 4.0.5) function
+`as.Seurat()` in the downstream analysis.
+```{r}
+sname <- "logcounts"
+altExp(pbmc, sname) <- SummarizedExperiment(list(counts = assay(pbmc, sname)))
+```
+
+Add ENTREZ Gene IDs to `rowData(sce)`.
+```{r, message = FALSE}
+dictionary <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db,
+                                    key = rownames(pbmc),
+                                    columns = "ENTREZID", keytype = "SYMBOL")
+dictionary <- dictionary[!duplicated(dictionary$SYMBOL), ]
+rowData(pbmc)$geneID <- dictionary$ENTREZID
+```
+
+
+
+<br>
+
+# Multifaceted sign analysis {#sign}
+Infer cell or disease types, biological functions, and signaling pathway
+activity at the single-cell level by inputting related databases.
+
+ASURAT transforms centered read count tables to functional feature matrices,
+termed sign-by-sample matrices (SSMs).
+Using SSMs, perform unsupervised clustering of samples (cells).
+
+
+
+<br>
+
+## Compute correlation matrices
+Prepare correlation matrices of gene expressions.
+```{r}
+set.seed(1)
+nrand_samples <- 1000
+mat <- t(as.matrix(assay(pbmc, "centered")))
+ids <- sample(rownames(mat), nrand_samples, prob = NULL)
+cormat <- cor(mat[ids, ], method = "spearman")
+```
+
+
+
+<br>
+
+## Load databases
+Load databases.
+```{r}
+urlpath <- "https://github.com/keita-iida/ASURATDB/blob/main/genes2bioterm/"
+load(url(paste0(urlpath, "20201213_human_CO.rda?raw=TRUE")))         # CO
+load(url(paste0(urlpath, "20220308_human_MSigDB.rda?raw=TRUE")))     # MSigDB
+load(url(paste0(urlpath, "20201213_human_GO_red.rda?raw=TRUE")))     # GO
+load(url(paste0(urlpath, "20201213_human_KEGG.rda?raw=TRUE")))       # KEGG
+```
+These knowledge-based data were available from the following repositories:
+
+* [DOI:10.6084/m9.figshare.19102598](https://figshare.com/s/0599d2de970c2deb675c)
+* [Github ASURATDB](https://github.com/keita-iida/ASURATDB)
+
+Create a custom-built (CB) cell type-related database by combining different
+databases for analyzing human single-cell transcriptome data.
+```{r}
+d <- list(human_CO[["cell"]], human_MSigDB[["cell"]])
+human_CB <- list(cell = do.call("rbind", d))
+```
+
+Add formatted databases to `metadata(sce)$sign`.
+```{r}
+pbmcs <- list(CB = pbmc, GO = pbmc, KG = pbmc)
+metadata(pbmcs$CB) <- list(sign = human_CB[["cell"]])
+metadata(pbmcs$GO) <- list(sign = human_GO[["BP"]])
+metadata(pbmcs$KG) <- list(sign = human_KEGG[["pathway"]])
+```
+
+
+
+<br>
+
+## Create signs
+ASURAT function `remove_signs()` redefines functional gene sets for the
+input database by removing genes, which are not included in `rownames(sce)`,
+and further removes biological terms including too few or too many genes.
+
+The arguments are
+
+* `sce`: SingleCellExperiment object,
+* `min_ngenes`: minimal number of genes> 1 (the default value is 2), and
+* `max_ngenes`: maximal number of genes> 1 (the default value is 1000).
+```{r}
+pbmcs$CB <- remove_signs(sce = pbmcs$CB, min_ngenes = 2, max_ngenes = 1000)
+pbmcs$GO <- remove_signs(sce = pbmcs$GO, min_ngenes = 2, max_ngenes = 1000)
+pbmcs$KG <- remove_signs(sce = pbmcs$KG, min_ngenes = 2, max_ngenes = 1000)
+```
+The results are stored in `metadata(sce)$sign`.
+
+ASURAT function `cluster_genes()` clusters functional gene sets using
+a correlation graph-based decomposition method, which produces strongly,
+variably, and weakly correlated gene sets (SCG, VCG, and WCG, respectively).
+
+The arguments are
+
+* `sce`: SingleCellExperiment object,
+* `cormat`: correlation matrix of gene expressions,
+* `th_posi` and `th_nega`: threshold values of positive and negative
+correlation coefficients, respectively.
+
+**Tips:**
+Empirically, typical values of `th_posi` and `th_nega` are
+$0.15 \le {\rm th{\_}posi} \le 0.4$ and $-0.4 \le {\rm th{\_}nega} \le -0.15$,
+but one cannot avoid trial and error for setting these values.
+An exhaustive parameter searching is time-consuming but helpful for obtaining
+interpretable results.
+```{r}
+set.seed(1)
+pbmcs$CB <- cluster_genesets(sce = pbmcs$CB, cormat = cormat,
+                             th_posi = 0.30, th_nega = -0.30)
+set.seed(1)
+pbmcs$GO <- cluster_genesets(sce = pbmcs$GO, cormat = cormat,
+                             th_posi = 0.30, th_nega = -0.30)
+set.seed(1)
+pbmcs$KG <- cluster_genesets(sce = pbmcs$KG, cormat = cormat,
+                             th_posi = 0.20, th_nega = -0.20)
+```
+The results are stored in `metadata(sce)$sign`.
+
+ASURAT function `create_signs()` creates signs by the following criteria:
+
+1. the number of genes in SCG>= `min_cnt_strg` (the default value is 2) and
+2. the number of genes in VCG>= `min_cnt_vari` (the default value is 2),
+
+which are independently applied to SCGs and VCGs, respectively.
+
+**Tips:**
+Empirically, typical values of `min_cnt_strg` and `min_cnt_vari` are
+$2 \le {\rm min\_cnt\_strg} = {\rm min\_cnt\_vari} \le 4$,
+but one cannot avoid trial and error for setting these values.
+An exhaustive parameter searching is time-consuming but helpful for obtaining
+interpretable results.
+```{r}
+pbmcs$CB <- create_signs(sce = pbmcs$CB, min_cnt_strg = 2, min_cnt_vari = 2)
+pbmcs$GO <- create_signs(sce = pbmcs$GO, min_cnt_strg = 4, min_cnt_vari = 4)
+pbmcs$KG <- create_signs(sce = pbmcs$KG, min_cnt_strg = 3, min_cnt_vari = 3)
+```
+The results are stored in `metadata(sce)$sign_all`,
+where "CorrType" indicates SCG or VCG, "Corr" means the average correlation
+coefficients of SCG or VCG, "CorrWeak" means the average correlation
+coefficients of WCG, "CorrGene" means SCG or VCG, and "WeakCorrGene" means WCG.
+The orders of gene symbols and ENTREZ IDs, separated by "/", are consistent.
+
+**Tips:**
+If one would like to recreate signs, reset the list of objects by, e.g.,
+(`pbmcs <- list(CB = pbmc, GO = pbmc, KG = pbmc)`), and go back to
+`remove_signs()`.
+
+
+
+<br>
+
+## Select signs
+If signs have semantic similarity information, one can use ASURAT function
+`remove_signs_redundant()` for removing redundant sings using the semantic
+similarity matrices.
+
+The arguments are
+
+* `sce`: SingleCellExperiment object,
+* `similarity_matrix`: a semantic similarity matrix,
+* `threshold`: a threshold value of semantic similarity, used for regarding
+biological terms as similar ones, and
+* `keep_rareID`: if `TRUE`, biological terms with the larger ICs are kept.
+
+**Tips:**
+The optimal value of `threshold` depends on the ontology structure as well as
+the method for computing semantic similarity matrix.
+```{r}
+pbmcs$GO <- remove_signs_redundant(sce = pbmcs$GO,
+                                   similarity_matrix = human_GO$similarity_matrix$BP,
+                                   threshold = 0.70, keep_rareID = TRUE)
+```
+The results are stored in `metadata(sce)$sign_SCG`, `metadata(sce)$sign_VCG`,
+`metadata(sce)$sign_all`, and if there exist, `metadata(sce)$sign_SCG_redundant`
+and `metadata(sce)$sign_VCG_redundant`.
+
+ASURAT function `remove_signs_manually()` removes signs by specifying
+IDs (e.g., `GOID:XXX`) or descriptions (e.g., `COVID`) using `grepl()`.
+The arguments are `sce` and `keywords` (keywords separated by `|`).
+```{r}
+keywords <- "Covid|COVID"
+pbmcs$KG <- remove_signs_manually(sce = pbmcs$KG, keywords = keywords)
+```
+The results are stored in `metadata(sce)$sign_SCG`, `metadata(sce)$sign_VCG`,
+and `metadata(sce)$sign_all`.
+
+There is another ASURAT function `select_signs_manually()`, a counter part of
+`remove_signs_manually()`, which removes signs that do not include `keywords`
+(keywords separated by `|`).
+```{r, eval = FALSE}
+keywords <- "cell|cyte"
+test <- select_signs_manually(sce = pbmcs$CB, keywords = keywords)
+```
+The results are stored in `metadata(sce)$sign_SCG`, `metadata(sce)$sign_VCG`,
+and `metadata(sce)$sign_all`.
+
+
+
+<br>
+
+## Create sign-by-sample matrices
+ASURAT function `create_sce_signmatrix()` creates a new SingleCellExperiment
+object `new_sce`, consisting of the following information:
+
+* `assayNames(new_sce)`: counts (SSM whose entries are termed sign scores),
+* `names(colData(new_sce))`: nReads, nGenes, percMT,
+* `names(rowData(new_sce))`: ParentSignID, Description, CorrGene, etc.,
+* `names(metadata(new_sce))`: sign_SCG, sign_VCG, etc.,
+* `altExpNames(new_sce)`: something if there is data in `altExp(sce)`.
+
+The arguments are
+
+* `sce`: SingleCellExperiment object,
+* `weight_strg`: weight parameter for SCG (the default value is 0.5), and
+* `weight_vari`: weight parameter for VCG (the default is 0.5).
+```{r}
+pbmcs$CB <- makeSignMatrix(sce = pbmcs$CB, weight_strg = 0.5, weight_vari = 0.5)
+pbmcs$GO <- makeSignMatrix(sce = pbmcs$GO, weight_strg = 0.5, weight_vari = 0.5)
+pbmcs$KG <- makeSignMatrix(sce = pbmcs$KG, weight_strg = 0.5, weight_vari = 0.5)
+```
+
+Below are head and tail of `assay(sce, "counts")`:
+```{r}
+rbind(head(assay(pbmcs$CB, "counts")[, 1:3], n = 4),
+      tail(assay(pbmcs$CB, "counts")[, 1:3], n = 4))
+```
+
+
+
+<br>
+
+## Reduce dimensions of sign-by-sample matrices
+Perform principal component analysis and t-distributed stochastic neighbor
+embedding (t-SNE).
+```{r}
+pca_dims <- c(30, 30, 50)
+tsne_dims <- c(2, 2, 3)
+for(i in seq_along(pbmcs)){
+  set.seed(1)
+  mat <- t(as.matrix(assay(pbmcs[[i]], "counts")))
+  res <- Rtsne::Rtsne(mat, dim = tsne_dims[i], pca = TRUE,
+                      initial_dims = pca_dims[i])
+  reducedDim(pbmcs[[i]], "TSNE") <- res[["Y"]]
+}
+```
+
+Show the results of dimensional reduction in t-SNE spaces.
+```{r}
+df <- as.data.frame(reducedDim(pbmcs$CB, "TSNE"))
+ggplot2::ggplot() + ggplot2::geom_point(ggplot2::aes(x = df[, 1], y = df[, 2]),
+                                        color = "black", size = 1, alpha = 1) +
+  ggplot2::labs(title = "PBMC (cell type)", x = "tSNE_1", y = "tSNE_2") +
+  ggplot2::theme_classic(base_size = 15)
+```
+
+```{r}
+df <- as.data.frame(reducedDim(pbmcs$GO, "TSNE"))
+ggplot2::ggplot() + ggplot2::geom_point(ggplot2::aes(x = df[, 1], y = df[, 2]),
+                                        color = "black", size = 1, alpha = 1) +
+  ggplot2::labs(title = "PBMC (function)", x = "tSNE_1", y = "tSNE_2") +
+  ggplot2::theme_classic(base_size = 15)
+```
+
+Use ASURAT function `plot_dataframe3D()` for plotting three-dimensional data.
+See `?plot_dataframe3D` for details.
+```{r}
+df <- as.data.frame(reducedDim(pbmcs$KG, "TSNE"))
+plot_dataframe3D(dataframe3D = df, theta = 45, phi = 30, title = "PBMC (pathway)",
+                 xlabel = "tSNE_1", ylabel = "tSNE_2", zlabel = "tSNE_3")
+```
+
+
+
+<br>
+
+## Cluster cells
+### Use Seurat functions
+To date (December, 2021), one of the most useful clustering methods in scRNA-seq
+data analysis is a combination of a community detection algorithm and
+graph-based unsupervised clustering, developed in Seurat package.
+
+Here, our strategy is as follows:
+
+1. convert SingleCellExperiment objects into Seurat objects
+  (note that `rowData()` and `colData()` must have data),
+2. perform `ScaleData()`, `RunPCA()`, `FindNeighbors()`, and `FindClusters()`,
+3. convert Seurat objects into temporal SingleCellExperiment objects `temp`,
+4. add `colData(temp)$seurat_clusters` into `colData(sce)$seurat_clusters`.
+```{r, message = FALSE, warning = FALSE, results = "hide"}
+resolutions <- c(0.20, 0.20, 0.10)
+ds <- list(seq_len(20), seq_len(20), seq_len(20))
+for(i in seq_along(pbmcs)){
+  surt <- Seurat::as.Seurat(pbmcs[[i]], counts = "counts", data = "counts")
+  mat <- as.matrix(assay(pbmcs[[i]], "counts"))
+  surt[["SSM"]] <- Seurat::CreateAssayObject(counts = mat)
+  Seurat::DefaultAssay(surt) <- "SSM"
+  surt <- Seurat::ScaleData(surt, features = rownames(surt))
+  surt <- Seurat::RunPCA(surt, features = rownames(surt))
+  surt <- Seurat::FindNeighbors(surt, reduction = "pca", dims = ds[[i]])
+  surt <- Seurat::FindClusters(surt, resolution = resolutions[i])
+  temp <- Seurat::as.SingleCellExperiment(surt)
+  colData(pbmcs[[i]])$seurat_clusters <- colData(temp)$seurat_clusters
+}
+```
+
+Show the clustering results in t-SNE spaces.
+```{r}
+labels <- colData(pbmcs$CB)$seurat_clusters
+df <- as.data.frame(reducedDim(pbmcs$CB, "TSNE"))
+ggplot2::ggplot() +
+  ggplot2::geom_point(ggplot2::aes(x = df[, 1], y = df[, 2], color = labels),
+                      size = 1, alpha = 1) +
+  ggplot2::labs(title = "PBMC (cell type)", x = "tSNE_1", y = "tSNE_2", color = "") +
+  ggplot2::theme_classic(base_size = 15) + ggplot2::scale_colour_hue() +
+  ggplot2::guides(colour = ggplot2::guide_legend(override.aes = list(size = 4)))
+```
+
+```{r}
+labels <- colData(pbmcs$GO)$seurat_clusters
+df <- as.data.frame(reducedDim(pbmcs$GO, "TSNE"))
+ggplot2::ggplot() +
+  ggplot2::geom_point(ggplot2::aes(x = df[, 1], y = df[, 2], color = labels),
+                      size = 1, alpha = 1) +
+  ggplot2::labs(title = "PBMC (function)", x = "tSNE_1", y = "tSNE_2", color = "") +
+  ggplot2::theme_classic(base_size = 15) +
+  ggplot2::scale_colour_brewer(palette = "Set1") +
+  ggplot2::guides(colour = ggplot2::guide_legend(override.aes = list(size = 4)))
+```
+
+Use ASURAT function `plot_dataframe3D()` for plotting three-dimensional data.
+See `?plot_dataframe3D` for details.
+```{r}
+labels <- colData(pbmcs$KG)$seurat_clusters
+colors <- scales::brewer_pal(palette = "Set2")(length(unique(labels)))[labels]
+df <- as.data.frame(reducedDim(pbmcs$KG, "TSNE")[, seq_len(3)])
+plot_dataframe3D(dataframe3D = df, labels = labels, colors = colors,
+                 theta = 45, phi = 30, title = "PBMC (pathway)",
+                 xlabel = "tSNE_1", ylabel = "tSNE_2", zlabel = "tSNE_3")
+```
+
+
+
+<br>
+
+### Cell cycle inference using Seurat functions
+If there is gene expression data in `altExp(sce)`, one can infer cell cycle
+phases by using Seurat functions in the similar manner as above.
+```{r, message = FALSE, warning = FALSE}
+surt <- Seurat::as.Seurat(pbmcs$CB, counts = "counts", data = "counts")
+mat <- as.matrix(assay(altExp(pbmcs$CB), "counts"))
+surt[["GEM"]] <- Seurat::CreateAssayObject(counts = mat)
+Seurat::DefaultAssay(surt) <- "GEM"
+surt <- Seurat::ScaleData(surt, features = rownames(surt))
+surt <- Seurat::RunPCA(surt, features = rownames(surt))
+surt <- Seurat::CellCycleScoring(surt, s.features = Seurat::cc.genes$s.genes,
+                                 g2m.features = Seurat::cc.genes$g2m.genes)
+temp <- Seurat::as.SingleCellExperiment(surt)
+colData(pbmcs$CB)$Phase <- colData(temp)$Phase
+```
+
+
+
+<br>
+
+## Investigate significant signs
+Significant signs are analogous to differentially expressed genes but bear
+biological meanings.
+Note that naïve usages of statistical tests should be avoided because the row
+vectors of SSMs are centered.
+
+Instead, ASURAT function `compute_sepI_all()` computes separation indices
+for each cluster against the others.
+Briefly, a separation index "sepI", ranging from -1 to 1, is a nonparametric
+measure of significance of a given sign score for a given subpopulation.
+The larger (resp. smaller) sepI is, the more reliable the sign is as a positive
+(resp. negative) marker for the cluster.
+
+The arguments are
+
+* `sce`: SingleCellExperiment object,
+* `labels`: a vector of labels of all the samples, and
+* `nrand_samples`: an integer for the number of samples used for random
+  sampling, which samples at least one sample per cluster.
+```{r, message = FALSE, results = "hide"}
+for(i in seq_along(pbmcs)){
+  set.seed(1)
+  labels <- colData(pbmcs[[i]])$seurat_clusters
+  pbmcs[[i]] <- compute_sepI_all(sce = pbmcs[[i]], labels = labels,
+                                 nrand_samples = 200)
+}
+```
+The results are stored in `metadata(sce)$marker_signs`.
+
+When computing separation indices between given clusters, e.g., cluster 1 versus
+clusters 2 and 3, use an ASURAT function `compute_sepI_clusters()`.
+See `?compute_sepI_clusters` for details.
+
+
+
+<br>
+
+## Investigate significant genes
+### Use Seurat function
+To date (December, 2021), one of the most useful methods of multiple statistical
+tests in scRNA-seq data analysis is to use a Seurat function `FindAllMarkers()`.
+
+If there is gene expression data in `altExp(sce)`, one can investigate
+differentially expressed genes by using Seurat functions in the similar manner
+as described before.
+```{r, message = FALSE}
+set.seed(1)
+surt <- Seurat::as.Seurat(pbmcs$CB, counts = "counts", data = "counts")
+mat <- as.matrix(assay(altExp(pbmcs$CB), "counts"))
+surt[["GEM"]] <- Seurat::CreateAssayObject(counts = mat)
+Seurat::DefaultAssay(surt) <- "GEM"
+surt <- Seurat::SetIdent(surt, value = "seurat_clusters")
+res <- Seurat::FindAllMarkers(surt, only.pos = TRUE,
+                              min.pct = 0.50, logfc.threshold = 0.50)
+metadata(pbmcs$CB)$marker_genes$all <- res
+```
+
+
+
+<br>
+
+## Multifaceted analysis {#multilayered}
+Simultaneously analyze multiple sign-by-sample matrices, which helps us
+characterize individual samples (cells) from multiple biological aspects.
+
+ASURAT function `plot_multiheatmaps()` shows heatmaps (ComplexHeatmap object)
+of sign scores and gene expression levels (if there are), where rows and columns
+stand for sign (or gene) and sample (cell), respectively.
+See `?plot_multiheatmaps` for details.
+
+First, remove unrelated signs by setting keywords, followed by selecting top
+significant signs and genes for the clustering results with respect to
+separation index and adjusted p-value, respectively.
+```{r}
+# Significant signs
+marker_signs <- list()
+keywords <- "MESENCHYMAL|LIMB|PANCREAS"
+for(i in seq_along(pbmcs)){
+  marker_signs[[i]] <- metadata(pbmcs[[i]])$marker_signs$all
+  marker_signs[[i]] <-
+    marker_signs[[i]][!grepl(keywords, marker_signs[[i]]$Description), ]
+  marker_signs[[i]] <- dplyr::group_by(marker_signs[[i]], Ident_1)
+  marker_signs[[i]] <- dplyr::slice_max(marker_signs[[i]], sepI, n = 2)
+  marker_signs[[i]] <- dplyr::slice_min(marker_signs[[i]], Rank, n = 1)
+}
+# Significant genes
+marker_genes_CB <- metadata(pbmcs$CB)$marker_genes$all
+marker_genes_CB <- dplyr::group_by(marker_genes_CB, cluster)
+marker_genes_CB <- dplyr::slice_min(marker_genes_CB, p_val_adj, n = 2)
+marker_genes_CB <- dplyr::slice_max(marker_genes_CB, avg_log2FC, n = 1)
+```
+
+Next, prepare the arguments.
+```{r}
+# ssm_list
+sces_sub <- list() ; ssm_list <- list()
+for(i in seq_along(pbmcs)){
+  sces_sub[[i]] <- pbmcs[[i]][rownames(pbmcs[[i]]) %in% marker_signs[[i]]$SignID, ]
+  ssm_list[[i]] <- assay(sces_sub[[i]], "counts")
+}
+names(ssm_list) <- c("SSM_cell", "SSM_function", "SSM_pathway")
+# gem_list
+expr_sub <- altExp(pbmcs$CB, "logcounts")
+expr_sub <- expr_sub[rownames(expr_sub) %in% marker_genes_CB$gene]
+gem_list <- list(x = t(scale(t(as.matrix(assay(expr_sub, "counts"))))))
+names(gem_list) <- "Scaled\nLogExpr"
+# ssmlabel_list
+labels <- list() ; ssmlabel_list <- list()
+for(i in seq_along(pbmcs)){
+  tmp <- colData(sces_sub[[i]])$seurat_clusters
+  labels[[i]] <- data.frame(label = tmp)
+  n_groups <- length(unique(tmp))
+  if(i == 1){
+    labels[[i]]$color <- scales::hue_pal()(n_groups)[tmp]
+  }else if(i == 2){
+    labels[[i]]$color <- scales::brewer_pal(palette = "Set1")(n_groups)[tmp]
+  }else if(i == 3){
+    labels[[i]]$color <- scales::brewer_pal(palette = "Set2")(n_groups)[tmp]
+  }
+  ssmlabel_list[[i]] <- labels[[i]]
+}
+names(ssmlabel_list) <- c("Label_cell", "Label_function", "Label_pathway")
+# gemlabel_list
+label_CC <- data.frame(label = colData(pbmcs$CB)$Phase, color = NA)
+gemlabel_list <- list(CellCycle = label_CC)
+```
+
+**Tips:**
+If one would like to omit some color labels (e.g., labels[[3]]), set the
+argument as follows:
+```{r, eval = FALSE}
+ssmlabel_list[[3]] <- data.frame(label = NA, color = NA)
+```
+
+Show heatmaps for the selected signs and genes.
+```{r, message = FALSE, warning = FALSE}
+set.seed(1)
+plot_multiheatmaps(ssm_list = ssm_list, gem_list = gem_list,
+                   ssmlabel_list = ssmlabel_list, gemlabel_list = gemlabel_list,
+                   nrand_samples = 100, show_row_names = TRUE, title = "PBMC")
+```
+
+**Tips:**
+If `nrand_samples` is set, `plot_multiheatmaps()` downsamples the samples
+(cells) without considering clustering labels.
+Take care of the clusters with small populations.
+
+Show violin plots for sign score distributions across cell type-related clusters.
+```{r}
+labels <- colData(pbmcs$CB)$seurat_clusters
+variable <- "GO:0042100-V"
+description <- "B cell proliferation"
+subsce <- pbmcs$GO[which(rownames(pbmcs$GO) == variable), ]
+df <- as.data.frame(t(as.matrix(assay(subsce, "counts"))))
+ggplot2::ggplot() +
+  ggplot2::geom_violin(ggplot2::aes(x = as.factor(labels), y = df[, 1],
+                                    fill = labels), trim = FALSE, size = 0.5) +
+  ggplot2::geom_boxplot(ggplot2::aes(x = as.factor(labels), y = df[, 1]),
+                        width = 0.15, alpha = 0.6) +
+  ggplot2::labs(title = paste0(variable, "\n", description),
+                x = "Cluster (cell type)", y = "Sign score") +
+  ggplot2::theme_classic(base_size = 20) +
+  ggplot2::theme(legend.position = "none") + ggplot2::scale_fill_hue()
+```
+
+Show violin plots for gene expression distributions across cell type-related
+clusters.
+```{r}
+vname <- "CD79A"
+sub <- altExp(pbmcs$CB, "logcounts")
+sub <- sub[rownames(sub) == vname, ]
+labels <- colData(pbmcs$CB)$seurat_clusters
+df <- as.data.frame(t(assay(sub, "counts")))
+ggplot2::ggplot() +
+  ggplot2::geom_violin(ggplot2::aes(x = as.factor(labels), y = df[, 1],
+                                    fill = labels), trim = FALSE, size = 0.5) +
+  ggplot2::geom_boxplot(ggplot2::aes(x = as.factor(labels), y = df[, 1]),
+                        width = 0.15, alpha = 0.6) +
+  ggplot2::labs(title = vname, x = "Cluster (cell type)",
+                y = "Normalized expression") +
+  ggplot2::theme_classic(base_size = 20) +
+  ggplot2::theme(legend.position = "none") + ggplot2::scale_fill_hue()
+```
+
+
+
+<br>
+
+# Session information
+
+```{r}
+sessionInfo()
+```
