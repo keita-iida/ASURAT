@@ -14,7 +14,7 @@ Well-documented vignette and tutorial is available from the following URL:
 ## Installation
 One can install ASURAT by the following code:
 
-```{r}
+```r
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
