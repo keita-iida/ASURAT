@@ -188,8 +188,9 @@ tutorial.
 Qualities of variable (gene) data are confirmed based on proper visualization of
 `rowData(sce)`.
 ```{r}
-df <- data.frame(x = 1:nrow(rowData(pbmc)),
-                 y = sort(rowData(pbmc)$nSamples, decreasing = TRUE))
+aveexp <- apply(as.matrix(assay(pbmc, "counts")), 1, mean)
+df <- data.frame(x = seq_len(nrow(rowData(pbmc))),
+                 y = sort(aveexp, decreasing = TRUE))
 ggplot2::ggplot() + ggplot2::scale_y_log10() +
   ggplot2::geom_point(ggplot2::aes(x = df$x, y = df$y), size = 1, alpha = 1) +
   ggplot2::labs(x = "Rank of genes", y = "Mean read counts") +
