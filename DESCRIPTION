@@ -1,7 +1,7 @@
 Package: ASURAT
 Type: Package
 Title: Functional annotation-driven unsupervised clustering for single-cell data
-Version: 0.99.15
+Version: 1.0.1
 Authors@R: c(person("Keita", "Iida", email = "kiida@protein.osaka-u.ac.jp",
              role = c("aut", "cre"),
              comment = c(ORCID = "0000-0002-1076-830X")),
