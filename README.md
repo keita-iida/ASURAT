@@ -1,16 +1,17 @@
 # ASURAT
-## Brief introduction
-ASURAT is a computational pipeline, implemented in the R programming language, for single-cell transcriptomics.
+ASURAT (functional annotation-driven unsupervised clustering of single-cell transcriptomes) is a computational tool, implemented in R programming language, for single-cell transcriptomics.
 Using ASURAT, one can simultaneously perform unsupervised clustering and biological interpretation in terms of cell type, disease, biological process, and signaling pathway activity.
 
 <br>
 
 <img src="vignettes/figure_00_0001.png" width="500px">
 
-## Vignettes
-Well-documented vignette and tutorial is available from the following URL:
+## Software vignettes
+Below is a vignette for basic usage using a PBMC dataset:
 
-* https://keita-iida.github.io/ASURAT/
+<br>
+
+https://keita-iida.github.io/ASURAT/
 
 ## Installation
 One can install ASURAT by the following code:
