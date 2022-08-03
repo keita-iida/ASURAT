@@ -11,7 +11,7 @@ Using ASURAT, one can simultaneously perform unsupervised clustering and biologi
 ## Vignettes
 Below is a vignette reviewed by Bioconductor reviewers:
 
-https://keita-iida.github.io/ASURAT/
+* https://keita-iida.github.io/ASURAT/
 
 <br>
 
@@ -27,7 +27,8 @@ Below are documents for analyzing several single-cell and spatial transcriptome 
 
 ## Change Log
 ### v1.0.0
-ASURAT was released on Bioconductor 3.1.5 (DOI: 10.18129/B9.bioc.ASURAT).
+ASURAT was released on Bioconductor 3.1.5.
+* https://bioconductor.org/packages/devel/bioc/html/ASURAT.html
 
 
 
@@ -44,16 +45,35 @@ BiocManager::install(version='devel')
 BiocManager::install("ASURAT")
 ```
 
-## Bioconductor
-One can find ASURAT in the following Bioconductor page:
 
-* https://bioconductor.org/packages/devel/bioc/html/ASURAT.html
 
-## Preprint
-The latest version is available from the following bioRxiv page:
+## News
+### 30 June, 2022
+Our research article (v4) was accepted.
+* To be appeared.
 
+
+### 12 October, 2021
+Our research article (v3) was appeared from bioRxiv.
 * https://www.biorxiv.org/content/10.1101/2021.06.09.447731v3
+
+
+### 12 September, 2021
+Our research article (v2) was appeared from bioRxiv.
+* https://www.biorxiv.org/content/10.1101/2021.06.09.447731v2.article-info
+
+
+### 10 June, 2021
+Our research article (v1) was appeared from bioRxiv.
+* https://www.biorxiv.org/content/10.1101/2021.06.09.447731v1?versioned=true
+
+
 
 ## License
 [GPL-3](https://github.com/keita-iida/ASURAT/blob/main/LICENSE)
+
+
+
+## Citation
+To be appeared.
 
