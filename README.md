@@ -3,7 +3,8 @@
 ASURAT is a computational pipeline, implemented in the R programming language, for single-cell transcriptomics.
 Using ASURAT, one can simultaneously perform unsupervised clustering and biological interpretation in terms of cell type, disease, biological process, and signaling pathway activity.
 
-## Graphical abstract
+<br>
+
 <img src="vignettes/figure_00_0001.png" width="500px">
 
 ## Vignettes
