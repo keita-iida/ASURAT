@@ -9,14 +9,12 @@ Using ASURAT, one can simultaneously perform unsupervised clustering and biologi
 
 
 ## Vignettes
-### Basic usage
 Below is a vignette reviewed by Bioconductor reviewers:
 
 https://keita-iida.github.io/ASURAT/
 
+<br>
 
-
-### Case studies
 Below are documents for analyzing several single-cell and spatial transcriptome datasets:
 
 * [PBMC 4k from healthy donors (10x Genomics)](https://keita-iida.github.io/ASURATBI/02-pbmc4k.html)
