@@ -15,7 +15,7 @@ Below is a vignette reviewed by Bioconductor reviewers:
 
 <br>
 
-Below are documents for analyzing several single-cell and spatial transcriptome datasets:
+Below are documents for analyzing several single-cell and spatial transcriptome datasets (see [here](https://github.com/keita-iida/ASURATBI) for the details):
 
 * [PBMC 4k from healthy donors (10x Genomics)](https://keita-iida.github.io/ASURATBI/02-pbmc4k.html)
 * [PBMC 6k from healthy donors (10x Genomics)](https://keita-iida.github.io/ASURATBI/03-pbmc6k.html)
