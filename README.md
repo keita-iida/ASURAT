@@ -6,12 +6,32 @@ Using ASURAT, one can simultaneously perform unsupervised clustering and biologi
 
 <img src="vignettes/figure_00_0001.png" width="500px">
 
-## Software vignettes
-Below is a vignette for basic usage using a PBMC dataset:
 
-<br>
+
+## Vignettes
+### Basic usage
+Below is a vignette reviewed by Bioconductor reviewers:
 
 https://keita-iida.github.io/ASURAT/
+
+
+
+### Case studies
+Below are documents for analyzing several single-cell and spatial transcriptome datasets:
+
+* [PBMC 4k from healthy donors (10x Genomics)](https://keita-iida.github.io/ASURATBI/02-pbmc4k.html)
+* [PBMC 6k from healthy donors (10x Genomics)](https://keita-iida.github.io/ASURATBI/03-pbmc6k.html)
+* [PBMCs from control and sepsis donors (Reyes et al., 2020)](https://keita-iida.github.io/ASURATBI/04-pbmc130k.html)
+* [Small cell lung cancer (Stewart et al., 2020)](https://keita-iida.github.io/ASURATBI/01-sclc.html)
+* [Pancreatid ductal adenocarcinoma (Moncada et al., 2020)](https://keita-iida.github.io/ASURATBI/05-pdac.html)
+
+
+
+## Change Log
+### v1.0.0
+ASURAT was released on Bioconductor 3.1.5 (DOI: 10.18129/B9.bioc.ASURAT).
+
+
 
 ## Installation
 One can install ASURAT by the following code:
