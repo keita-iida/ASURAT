@@ -50,25 +50,28 @@ BiocManager::install("ASURAT")
 ## News
 30 June, 2022:
 Our research article (v4) was accepted.
-* To be appeared.
+To be appeared.
 
 <br>
 
 12 October, 2021:
 Our research article (v3) was appeared from bioRxiv.
-* https://www.biorxiv.org/content/10.1101/2021.06.09.447731v3
+
+https://www.biorxiv.org/content/10.1101/2021.06.09.447731v3
 
 <br>
 
 12 September, 2021:
 Our research article (v2) was appeared from bioRxiv.
-* https://www.biorxiv.org/content/10.1101/2021.06.09.447731v2.article-info
+
+https://www.biorxiv.org/content/10.1101/2021.06.09.447731v2.article-info
 
 <br>
 
 10 June, 2021:
 Our research article (v1) was appeared from bioRxiv.
-* https://www.biorxiv.org/content/10.1101/2021.06.09.447731v1?versioned=true
+
+https://www.biorxiv.org/content/10.1101/2021.06.09.447731v1?versioned=true
 
 
 
