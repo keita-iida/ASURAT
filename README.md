@@ -70,9 +70,7 @@ https://www.biorxiv.org/content/10.1101/2021.06.09.447731v2.article-info
 -->
 
 10 June, 2021:
-Our research article (v1) was appeared from bioRxiv.
-
-https://www.biorxiv.org/content/10.1101/2021.06.09.447731v1?versioned=true
+Our research article (v1) was appeared from bioRxiv. [Link](https://www.biorxiv.org/content/10.1101/2021.06.09.447731v1?versioned=true)
 
 
 
