@@ -55,6 +55,7 @@ https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformati
 
 <br>
 
+<!--
 12 October, 2021:
 Our research article (v3) was appeared from bioRxiv.
 
@@ -68,6 +69,7 @@ Our research article (v2) was appeared from bioRxiv.
 https://www.biorxiv.org/content/10.1101/2021.06.09.447731v2.article-info
 
 <br>
+-->
 
 10 June, 2021:
 Our research article (v1) was appeared from bioRxiv.
