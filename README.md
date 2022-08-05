@@ -50,7 +50,8 @@ BiocManager::install("ASURAT")
 ## News
 30 June, 2022:
 Our research article (v4) was accepted.
-To be appeared.
+
+https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btac541/6655687
 
 <br>
 
