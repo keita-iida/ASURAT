@@ -48,8 +48,8 @@ BiocManager::install("ASURAT")
 
 
 ## News
-30 June, 2022:
-Our research article (v4) was accepted. [Link](https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btac541/6655687?guestAccessKey=af2587b1-5938-43f1-a25d-4feb5426ab55)
+5 August, 2022:
+Our research article (v4) was published in Bioinformatics. [Link](https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btac541/6655687?guestAccessKey=af2587b1-5938-43f1-a25d-4feb5426ab55)
 
 <br>
 
@@ -80,5 +80,8 @@ Our research article (v1) was appeared from bioRxiv. [Link](https://www.biorxiv.
 
 
 ## Citation
-To be appeared.
+To be appeared. [Link](https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btac541/6655687?guestAccessKey=af2587b1-5938-43f1-a25d-4feb5426ab55)
 
+<! --
+K. Iida, J. Kondo, J. N. Wibisana, M. Inoue, M. Okada, ASURAT: functional annotation-driven unsupervised clustering of single-cell transcriptomes, Bioinformatics 38(16), 1-7 (2022).
+-->
