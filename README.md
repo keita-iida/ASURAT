@@ -23,6 +23,11 @@ Below are documents for analyzing several single-cell and spatial transcriptome 
 * [Small cell lung cancer (Stewart et al., 2020)](https://keita-iida.github.io/ASURATBI/01-sclc.html)
 * [Pancreatid ductal adenocarcinoma (Moncada et al., 2020)](https://keita-iida.github.io/ASURATBI/05-pdac.html)
 
+Below are supporting information:
+
+* [Several computations for PBMC datasets](https://keita-iida.github.io/ASURATBI/06-pbmcs.html)
+* [Miscellaneous](https://keita-iida.github.io/ASURATBI/07-misc.html)
+
 <br>
 
 Below is a document for collecting databases for functional annotation of genes (see [here](https://github.com/keita-iida/ASURATDB) for the details):
