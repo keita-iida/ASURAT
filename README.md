@@ -44,13 +44,19 @@ ASURAT was released on Bioconductor 3.1.5.
 
 
 ## Installation
-One can install ASURAT by the following code:
+One can install ASURAT (Bioconductor version) by the following code:
 
 ```r
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
 BiocManager::install("ASURAT")
+```
+
+To install a developmental version, execute the following code:
+
+```r
+devtools::install_github("keita-iida/ASURAT", upgrade = "never")
 ```
 
 
