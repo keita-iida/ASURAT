@@ -2,8 +2,12 @@
 .Rhistory
 .RData
 .Ruserdata
+.RDataTmp
 ASURAT.Rproj
 ASURAT_files
+ASURAT.BiocCheck
+backup
+rawdata
 .DS_Store
 
 src/*.o

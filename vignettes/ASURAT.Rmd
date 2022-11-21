@@ -3,6 +3,7 @@ title: "ASURAT"
 author: "Keita Iida"
 date: "`r Sys.Date()`"
 output:
+#  rmarkdown::github_document:
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 2
@@ -243,6 +244,14 @@ dictionary <- dictionary[!duplicated(dictionary$SYMBOL), ]
 rowData(pbmc)$geneID <- dictionary$ENTREZID
 ```
 
+```{r, eval = FALSE, echo = FALSE}
+# Save data.
+saveRDS(pbmc, file = "backup/pbmc_normalized.rds")
+
+# Load data.
+pbmc <- readRDS("backup/pbmc_normalized.rds")
+```
+
 
 
 <br>
@@ -267,6 +276,14 @@ nrand_samples <- 1000
 mat <- t(as.matrix(assay(pbmc, "centered")))
 ids <- sample(rownames(mat), nrand_samples, prob = NULL)
 cormat <- cor(mat[ids, ], method = "spearman")
+```
+
+```{r, eval = FALSE, echo = FALSE}
+# Save data.
+saveRDS(cormat, file = "backup/pbmc_cormat.rds")
+
+# Load data.
+cormat <- readRDS("backup/pbmc_cormat.rds")
 ```
 
 
@@ -403,6 +420,10 @@ biological terms as similar ones, and
 The optimal value of `threshold` depends on the ontology structure as well as
 the method for computing semantic similarity matrix.
 ```{r}
+# pbmcs$CB <- remove_signs_redundant(sce = pbmcs$CB,
+#                                    similarity_matrix = human_CO$similarity_matrix$cell,
+#                                    threshold = 0.90, keep_rareID = TRUE)
+
 pbmcs$GO <- remove_signs_redundant(sce = pbmcs$GO,
                                    similarity_matrix = human_GO$similarity_matrix$BP,
                                    threshold = 0.70, keep_rareID = TRUE)
